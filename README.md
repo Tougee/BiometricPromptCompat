@@ -35,8 +35,17 @@ And we should realize that **in Android M there is only fingerprint sensor to be
 Include library in your app module:
 
 ```groovy
+allprojects {
+    repositories {
+        ...
+        maven { url 'https://jitpack.io' }
+    }
+}
+```
+
+```groovy
 dependencies {
-     implementation 'moe.feng.support.biometricprompt:library:1.0.1'
+     implementation 'com.github.tougee:BiometricPromptCompat:1.0.2'
 }
 ```
 
