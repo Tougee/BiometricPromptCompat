@@ -45,7 +45,7 @@ allprojects {
 
 ```groovy
 dependencies {
-     implementation 'com.github.tougee:BiometricPromptCompat:1.0.2'
+     implementation 'com.github.tougee:BiometricPromptCompat:1.0.3'
 }
 ```
 

@@ -6,10 +6,11 @@ import android.os.Bundle;
 import android.os.CancellationSignal;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
+import android.view.View;
+import android.view.Window;
 import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
-
 import moe.feng.support.biometricprompt.BiometricPromptCompat;
 
 public class MainActivity extends Activity
@@ -18,6 +19,10 @@ public class MainActivity extends Activity
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
+        Window window = getWindow();
+        window.setNavigationBarColor(getResources().getColor(android.R.color.white));
+        window.getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR | View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR);
         setContentView(R.layout.activity_main);
 
         final Button authButton = findViewById(R.id.btn_auth);
