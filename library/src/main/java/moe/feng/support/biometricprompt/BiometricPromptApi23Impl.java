@@ -9,7 +9,10 @@ import android.support.annotation.Nullable;
 import android.support.annotation.RequiresApi;
 import android.support.annotation.RestrictTo;
 import android.util.Log;
+import android.view.LayoutInflater;
 import android.view.View;
+import android.widget.Button;
+import android.widget.TextView;
 
 import javax.crypto.Cipher;
 import javax.crypto.Mac;
@@ -26,7 +29,10 @@ class BiometricPromptApi23Impl implements IBiometricPromptImpl {
 
     private final FingerprintManager fingerprintManager;
 
-    private final BiometricPromptCompatDialog dialog;
+    private BiometricPromptDialog dialog;
+    private final TextView mStatus;
+    private final Button mNegativeButton;
+    private final FingerprintIconView mFingerprintIcon;
 
     @Nullable
     private CancellationSignal cancellationSignal;
@@ -53,31 +59,52 @@ class BiometricPromptApi23Impl implements IBiometricPromptImpl {
         this.fingerprintManager = context.getSystemService(FingerprintManager.class);
         this.negativeButtonListener = negativeButtonListener;
 
-        dialog = new BiometricPromptCompatDialog(context);
+//        dialog = new BiometricPromptCompatDialog(context);
+//
+//        dialog.setTitle(title);
+//        if (subtitle == null) {
+//            dialog.getSubtitle().setVisibility(View.GONE);
+//        } else {
+//            dialog.getSubtitle().setText(subtitle);
+//        }
+//        if (description == null) {
+//            dialog.getDescription().setVisibility(View.GONE);
+//        } else {
+//            dialog.getDescription().setText(description);
+//        }
+//        if (negativeButtonText == null) {
+//            dialog.getNegativeButton().setVisibility(View.INVISIBLE);
+//        } else {
+//            dialog.getNegativeButton().setText(negativeButtonText);
+//            if (negativeButtonListener == null) {
+//                throw new IllegalArgumentException("Negative button listener should not be null.");
+//            }
+//            dialog.getNegativeButton().setOnClickListener(v -> {
+//                dialog.dismiss();
+//                negativeButtonListener.onClick(dialog, DialogInterface.BUTTON_NEGATIVE);
+//            });
+//        }
+        
 
-        dialog.setTitle(title);
-        if (subtitle == null) {
-            dialog.getSubtitle().setVisibility(View.GONE);
-        } else {
-            dialog.getSubtitle().setText(subtitle);
-        }
-        if (description == null) {
-            dialog.getDescription().setVisibility(View.GONE);
-        } else {
-            dialog.getDescription().setText(description);
-        }
-        if (negativeButtonText == null) {
-            dialog.getNegativeButton().setVisibility(View.INVISIBLE);
-        } else {
-            dialog.getNegativeButton().setText(negativeButtonText);
-            if (negativeButtonListener == null) {
-                throw new IllegalArgumentException("Negative button listener should not be null.");
-            }
-            dialog.getNegativeButton().setOnClickListener(v -> {
+        View rootView = LayoutInflater.from(getContext())
+                .inflate(R.layout.biometric_prompt_dialog_content, null);
+        ((TextView) rootView.findViewById(R.id.title)).setText(title);
+        ((TextView) rootView.findViewById(R.id.subtitle)).setText(subtitle);
+        ((TextView) rootView.findViewById(R.id.description)).setText(description);
+        mStatus = rootView.findViewById(R.id.status);
+        mNegativeButton = rootView.findViewById(android.R.id.button1);
+        mNegativeButton.setText(negativeButtonText);
+        mNegativeButton.setOnClickListener(v -> {
+            if (dialog != null) {
                 dialog.dismiss();
-                negativeButtonListener.onClick(dialog, DialogInterface.BUTTON_NEGATIVE);
-            });
-        }
+            }
+            negativeButtonListener.onClick(dialog, DialogInterface.BUTTON_NEGATIVE);
+        });
+        mFingerprintIcon = rootView.findViewById(R.id.fingerprint_icon);
+        
+        dialog = new BiometricPromptDialog.Builder(context)
+                .setCustomView(rootView)
+                .create();
     }
 
     @NonNull
@@ -117,7 +144,7 @@ class BiometricPromptApi23Impl implements IBiometricPromptImpl {
             }
         });
         dialog.setOnShowListener(d -> {
-            dialog.getFingerprintIcon().setState(
+            mFingerprintIcon.setState(
                     FingerprintIconView.State.ON, false);
             fingerprintManager.authenticate(
                     toCryptoObjectApi23(crypto), innerCancel,
@@ -127,7 +154,7 @@ class BiometricPromptApi23Impl implements IBiometricPromptImpl {
         dialog.show();
     }
 
-    BiometricPromptCompatDialog getAuthenticateDialogForFragment(
+    BiometricPromptDialog getAuthenticateDialogForFragment(
             @Nullable BiometricPromptCompat.ICryptoObject crypto,
             @Nullable CancellationSignal cancel,
             @NonNull BiometricPromptCompat.IAuthenticationCallback callback
@@ -147,7 +174,7 @@ class BiometricPromptApi23Impl implements IBiometricPromptImpl {
         });
 
         dialog.setOnShowListener(d -> {
-            dialog.getFingerprintIcon().setState(
+            mFingerprintIcon.setState(
                     FingerprintIconView.State.ON, false);
             fingerprintManager.authenticate(
                     toCryptoObjectApi23(crypto), innerCancel,
@@ -209,8 +236,8 @@ class BiometricPromptApi23Impl implements IBiometricPromptImpl {
         public void handleMessage(Message msg) {
             switch (msg.what) {
                 case WHAT_RESTORE_NORMAL_STATE:
-                    dialog.getFingerprintIcon().setState(FingerprintIconView.State.ON);
-                    dialog.getStatus().setText(R.string.touch_fingerprint_sensor_hint);
+                    mFingerprintIcon.setState(FingerprintIconView.State.ON);
+                    mStatus.setText(R.string.touch_fingerprint_sensor_hint);
                     break;
             }
         }
@@ -223,9 +250,9 @@ class BiometricPromptApi23Impl implements IBiometricPromptImpl {
         public void onAuthenticationError(int errorCode, CharSequence errString) {
             animateHandler.removeMessages(AnimateHandler.WHAT_RESTORE_NORMAL_STATE);
             if (errString != null) {
-                dialog.getStatus().setText(errString);
+                mStatus.setText(errString);
             }
-            dialog.getFingerprintIcon().setState(FingerprintIconView.State.ERROR);
+            mFingerprintIcon.setState(FingerprintIconView.State.ERROR);
             animateHandler.sendEmptyMessageDelayed(AnimateHandler.WHAT_RESTORE_NORMAL_STATE, 2000);
             callback.onAuthenticationError(errorCode, errString);
         }
@@ -233,9 +260,9 @@ class BiometricPromptApi23Impl implements IBiometricPromptImpl {
         @Override
         public void onAuthenticationHelp(int helpCode, CharSequence helpString) {
             if (helpString != null) {
-                dialog.getStatus().setText(helpString);
+                mStatus.setText(helpString);
             }
-            dialog.getFingerprintIcon().setState(FingerprintIconView.State.ON);
+            mFingerprintIcon.setState(FingerprintIconView.State.ON);
             callback.onAuthenticationHelp(helpCode, helpString);
         }
 
@@ -249,8 +276,8 @@ class BiometricPromptApi23Impl implements IBiometricPromptImpl {
         @Override
         public void onAuthenticationFailed() {
             animateHandler.removeMessages(AnimateHandler.WHAT_RESTORE_NORMAL_STATE);
-            dialog.getFingerprintIcon().setState(FingerprintIconView.State.ERROR);
-            dialog.getStatus().setText(R.string.not_recognized_fingerprint_hint);
+            mFingerprintIcon.setState(FingerprintIconView.State.ERROR);
+            mStatus.setText(R.string.not_recognized_fingerprint_hint);
             animateHandler.sendEmptyMessageDelayed(AnimateHandler.WHAT_RESTORE_NORMAL_STATE, 2000);
             callback.onAuthenticationFailed();
         }
